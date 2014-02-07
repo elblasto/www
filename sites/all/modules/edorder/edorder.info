@@ -1,0 +1,5 @@
+name = ED Order
+description = Создает дополнительные настройки для формы заказа.
+package = E-Delivery
+core = 7.x
+scripts[] = js/edorder.js

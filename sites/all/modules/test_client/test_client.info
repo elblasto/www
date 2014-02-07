@@ -1,0 +1,4 @@
+name = TEST CLIENT
+description = Создает дополнительные настройки для формы заказа.
+package = E-Delivery
+core = 7.x

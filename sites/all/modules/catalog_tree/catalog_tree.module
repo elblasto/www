@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * Implements hook_block_info().
+ */
+function catalog_tree_block_info() {
+  $blocks = array();
+  $blocks['catalog_tree'] = array(
+    'info' => t('Дерево категорий'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function catalog_tree_block_view($delta = '') {
+  // This example is adapted from node.module.
+  $block = array();
+  $terms = taxonomy_get_tree(2);
+  $terms_links = array();
+  foreach ($terms as $term) {
+    $active_class = arg(2) == $term->tid ? 'active' : '';
+    $edit_link = arg(2) == $term->tid ? ' <a href="/taxonomy/term/' . $term->tid . '/edit" class="pull-right"><small>Изменить</small></a>' : '';
+    if ($term->depth == 0) {
+      $terms_links[] = '<li class="' . $active_class . '"><a href="/taxonomy/term/' . $term->tid . '">' . $term->name . '</a>' . $edit_link . '</li>';
+      
+      $children_terms = taxonomy_get_children($term->tid);      
+      
+      
+      foreach ($children_terms as $children_term) {
+        $active_class = arg(2) == $children_term->tid ? 'active' : '';
+        $edit_link = arg(2) == $children_term->tid ? ' <a href="/taxonomy/term/' . $children_term->tid . '/edit" class="pull-right"><small>Изменить</small></a>' : '';
+        $terms_links[] = '<li class="' . $active_class . ' child"><a href="/taxonomy/term/' . $children_term->tid . '">' . $children_term->name . '</a>' . $edit_link . '</li>';
+      }
+    }
+  }
+  $block['content'] = '<ul>' . implode('', $terms_links) . '</ul>';
+  return $block;
+}

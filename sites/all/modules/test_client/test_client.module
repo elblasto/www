@@ -1,0 +1,42 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function test_client_block_info() {
+  $blocks = array();
+  $blocks['test_client'] = array(
+    'info' => t('TEST CLIENT BLOCK'),
+  );
+ 
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function test_client_block_view($delta='') {
+  $block = array();
+ 
+  switch($delta) {
+    case 'test_client' :
+      $form = drupal_get_form('test_client_edit_form', arg(1));
+      $block['content'] = render($form);
+      break;
+  }
+ 
+  return $block;
+}
+
+function test_client_edit_form($form, &$form_state, $cid) {  
+  $form_state['cid'] = $cid;
+  $entity = entity_load_single('client', $cid);
+  field_attach_form('client', $entity, $form, $form_state);
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Сохранить'),
+    '#weight' => 50,
+    '#prefix' => '<div class="form-actions form-wrapper">',
+    '#suffix' => '</div>',
+  );
+  return $form;
+}

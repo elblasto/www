@@ -1,0 +1,4 @@
+name = ED Client
+description = Переопределяет функционал создания пользователя (клиента) для приема заказа.
+package = E-Delivery
+core = 7.x

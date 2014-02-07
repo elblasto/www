@@ -1,0 +1,4 @@
+name = Catalog tree
+description = Создает блок, который выводит дерево категорий.
+package = E-Delivery
+core = 7.x

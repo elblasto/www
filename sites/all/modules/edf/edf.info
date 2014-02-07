@@ -1,0 +1,4 @@
+name = Edf
+description = E-delivery form изменение форм PHP.
+package = E-Delivery
+core = 7.x

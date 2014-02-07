@@ -1,0 +1,239 @@
+<?php
+
+/**
+ * @file
+ * A description of what your module does.
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter()
+ *
+ * PRODUCT FORM
+ */
+function edf_form_product_node_form_alter(&$form, &$form_state, $form_id) {
+  //dpm($form);
+
+  $form['title']['#attributes'] = array(
+    'class' => array(
+      'span12'
+    )
+  );
+
+  // Category
+  $form['field_category']['#attributes']['class'][] = 'span6';
+  $form['field_category']['und']['#attributes'] = array(
+    'class' => array(
+      'span12'
+    )
+  );
+
+  // Image
+  $form['field_image']['#attributes']['class'][] = 'span6';
+
+  
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * 
+ * TAXONOMY FORM
+ */
+function edf_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
+  if ($form['#vocabulary']->machine_name == 'catalog') {
+    $form['relations']['#collapsed'] = FALSE;
+    $form['relations']['parent']['#attributes'] = array(
+      'class' => array('span12')
+    );
+    $form['relations']['parent']['#title_display'] = 'invisible';
+    $form['relations']['#title'] = t('Родительские категории');
+    $category_options = array();
+    $categories = taxonomy_get_tree(2);
+    $category_options[0] = '<Без родителя>';
+    foreach ($categories as $category) {
+      if ($category->depth == 0)
+        $category_options[$category->tid] = $category->name;
+    }
+    $form['relations']['parent']['#options'] = $category_options;
+  }
+  elseif($form['#vocabulary']->machine_name == 'ingredients') {
+    $form['#validate'][] = '_check_ingredients'; // Check if ingredients is in DB already.
+    $form['relations']['#attributes'] = array(
+      'class' => array('hidden')
+    );
+    $form['description']['#type'] = 'value'; 
+    $form['description']['#value'] = NULL;
+  }
+}
+
+function _check_ingredients(&$form, &$form_state) {
+  if ($form_state['clicked_button']['#value'] == t('Сохранить')) {
+    $term = taxonomy_get_term_by_name($form_state['values']['name']);
+    if (!empty($term))
+      form_set_error('name', 'Ингредиент ' . $form_state['values']['name'] . ' уже есть в справочнике.');
+  }
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function edf_theme_registry_alter(&$theme_registry) {
+  if (isset($theme_registry['field_multiple_value_form'])) {
+    $theme_registry['field_multiple_value_form']['type'] = 'module';
+    $theme_registry['field_multiple_value_form']['theme path'] = drupal_get_path('module', 'edf');
+    $theme_registry['field_multiple_value_form']['function'] = 'edf_theme_field_multiple_value_form';
+  }
+}
+
+/**
+ * Theme function override for multiple-value form widgets.
+ *
+ * @see theme_field_multiple_value_form()
+ */
+function edf_theme_field_multiple_value_form($variables) {
+  $element = $variables['element'];
+  $output = '';
+ 
+  // The first condition is the override.
+  if (($element['#cardinality'] > 1 || $element['#cardinality'] == FIELD_CARDINALITY_UNLIMITED) && isset($element[0]['#nodrag'])) {
+    $table_id = drupal_html_id($element['#field_name'] . '_values');
+    $required = !empty($element['#required']) ? theme('form_required_marker', $variables) : '';
+ 
+    $header = array(
+      array(
+        'data' => '<label>' . t('!title !required', array('!title' => $element['#title'], '!required' => $required)) . "</label>",
+        'class' => array('field-label'),
+      ),
+    );
+    $rows = array();
+ 
+    // Sort items according to weight
+    $items = array();
+    foreach (element_children($element) as $key) {
+      if ($key === 'add_more') {
+        $add_more_button = &$element[$key];
+      }
+      else {
+        $items[] = &$element[$key];
+      }
+    }
+    usort($items, '_field_sort_items_value_helper');
+ 
+    // Add the items as table rows.
+    foreach ($items as $key => $item) {
+      // Hide a required simbol "*"
+      $item['value']['#title_display'] = 'invisible';
+      // We don't want the weight to render.
+      unset($item['_weight']);
+      $cells = array(
+        drupal_render($item),
+      );
+      $rows[] = array(
+        'data' => $cells,
+      );
+    }
+ 
+    $output = '<div class="form-item">';
+    $output .= theme('table', array(
+      'header' => $header,
+      'rows' => $rows,
+      'attributes' => array(
+        'id' => $table_id,
+        'class' => array('field-multiple-table'),
+      ),
+    ));
+    $output .= $element['#description'] ? '<div class="description">' . $element['#description'] . '</div>' : '';
+    $output .= '<div class="clearfix">' . drupal_render($add_more_button) . '</div>';
+    $output .= '</div>';
+  }
+  elseif ($element['#cardinality'] > 1 || $element['#cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
+    $table_id = drupal_html_id($element['#field_name'] . '_values');
+    $order_class = $element['#field_name'] . '-delta-order';
+    $required = !empty($element['#required']) ? theme('form_required_marker', $variables) : '';
+ 
+    $header = array(
+      array(
+        'data' => '<label>' . t('!title !required', array('!title' => $element['#title'], '!required' => $required)) . "</label>",
+        'colspan' => 2,
+        'class' => array('field-label'),
+      ),
+      t('Order'),
+    );
+    $rows = array();
+ 
+    // Sort items according to '_weight' (needed when the form comes back after
+    // preview or failed validation).
+    $items = array();
+    foreach (element_children($element) as $key) {
+      if ($key === 'add_more') {
+        $add_more_button = &$element[$key];
+      }
+      else {
+        $items[] = &$element[$key];
+      }
+    }
+    usort($items, '_field_sort_items_value_helper');
+ 
+    // Add the items as table rows.
+    foreach ($items as $key => $item) {
+      $item['_weight']['#attributes']['class'] = array($order_class);
+      $delta_element = drupal_render($item['_weight']);
+      $cells = array(
+        array(
+          'data' => '',
+          'class' => array('field-multiple-drag'),
+        ),
+        drupal_render($item),
+        array(
+          'data' => $delta_element,
+          'class' => array('delta-order'),
+        ),
+      );
+      $rows[] = array(
+        'data' => $cells,
+        'class' => array('draggable'),
+      );
+    }
+ 
+    $output = '<div class="form-item">';
+    $output .= theme('table', array(
+      'header' => $header,
+      'rows' => $rows,
+      'attributes' => array(
+        'id' => $table_id,
+        'class' => array('field-multiple-table'),
+      ),
+    ));
+    $output .= $element['#description'] ? '<div class="description">' . $element['#description'] . '</div>' : '';
+    $output .= '<div class="clearfix">' . drupal_render($add_more_button) . '</div>';
+    $output .= '</div>';
+ 
+    drupal_add_tabledrag($table_id, 'order', 'sibling', $order_class);
+  }
+  else {
+    foreach (element_children($element) as $key) {
+      $output .= drupal_render($element[$key]);
+    }
+  }
+ 
+  return $output;
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ */
+function edf_field_widget_form_alter(&$element, &$form_state, $context) {
+  if (isset($element['#field_name'])) {
+    switch ($element['#field_name']) {
+      case 'field_phone':
+        $element['#nodrag'] = TRUE;
+      case 'field_address':
+        $element['#nodrag'] = TRUE;
+      case 'field_order_content':
+        $element['#nodrag'] = TRUE;
+      case 'field_client_addresses':
+        $element['#nodrag'] = TRUE;
+      default:
+        break;
+    }
+  }
+}

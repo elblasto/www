@@ -1,0 +1,172 @@
+<?php
+
+/**
+ * Implements hook_entity_info().
+ */
+function edclient_entity_info() {
+  return array(
+    'client' => array(
+      'label' => t('Клиент'),
+      'plural label' => t('Клиенты'),
+      'entity class' => 'Entity',
+      'controller class' => 'EntityAPIController',
+      'views controller class' => 'EntityDefaultViewsController',
+      'base table' => 'edclient',
+      'entity keys' => array(
+        'id' => 'cid',
+      ),
+      'bundles' => array(
+        'client' => array(
+          'label' => t('Клиент'),
+          'admin' => array(
+            'path' => 'admin/structure/client',
+          ),
+        ),
+      ),
+      'fieldable' => TRUE,
+      //'access arguments' => array('manage client'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function edclient_permission() {
+  return array(
+    'manage client' => array(
+      'title' => t('Управлять клиентами'),
+      'description' => t('Позволяет пользователям управлять клиентами (удление, редактирование, добавление и т.д.).'),
+    ),
+    'add client' => array(
+      'title' => t('Добавлять клиентов'),
+      'description' => t('Позволяет пользователям добавлять клиентов через форму.'),
+    ),
+    'edit client' => array(
+      'title' => t('Редактировать клиентов'),
+      'description' => t('Позволяет пользователям редактировать клиентов через форму.'),
+    ),
+    'delete client' => array(
+      'title' => t('Удалять клиентов'),
+      'description' => t('Позволяет пользователям удалять клиентов через форму.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function edclient_menu() {
+  $items['admin/structure/client'] = array(
+    'title' => t('Клиент'),
+    'access arguments' => array('administer client'),
+    'page callback' => 'client_list',
+    'file' => 'client.admin.inc',
+  );
+  $items['client/add'] = array(
+    'title' => t('Добавить клиента'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('client_add'),
+    'file' => 'client.admin.inc',
+    'access arguments' => array('add client'),
+  );
+  $items['client/%/delete'] = array(
+    'title' => t('Удалить клиента'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_client_delete', 1), // admin=0, str=1, client=2, CID=3!
+    'file' => 'client.admin.inc',
+    'access arguments' => array('delete client'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function edclient_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'client_add' || $form_id == 'edclient_edit_form') {
+    $form['field_phone']['#attributes']['class'][] = 'span6';
+    $form['field_client_addresses']['#attributes']['class'][] = 'span6';
+
+    // Set a 'span12' class for all address inputs
+    for ($i = 0; $i <= $form['field_client_addresses']['und']['#max_delta']; $i++) {
+      $form['field_client_addresses']['und'][$i]['value']['#attributes']['class'][] = 'span12';
+    }
+
+    // Set a 'span12' class for all address inputs
+    for ($i = 0; $i <= $form['field_client_addresses']['und']['#max_delta']; $i++) {
+      $form['field_client_addresses']['und'][$i]['field_full_address']['#attributes']['class'][] = 'span5';
+      $form['field_client_addresses']['und'][$i]['field_comment']['#attributes']['class'][] = 'span7';
+
+      $form['field_client_addresses']['und'][$i]['remove_button']['#attributes']['class'][] = 'btn-mini';
+      $form['field_client_addresses']['und'][$i]['remove_button']['#prefix'] = '<p style="margin-top:3px; margin-bottom:0;" class="pull-right">';
+      $form['field_client_addresses']['und'][$i]['remove_button']['#suffix'] = '</p>';
+    }
+    $form['field_bonus']['#prefix'] = '<div class="row-fluid">';
+    $form['field_bonus']['#attributes']['class'][] = 'span3';
+    $form['field_bonus']['#suffix'] = '</div>';
+  }
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function edclient_block_info() {
+  $blocks = array();
+  $blocks['test_client'] = array(
+    'info' => t('TEST CLIENT BLOCK'),
+  );
+ 
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function edclient_block_view($delta='') {
+  $block = array();
+ 
+  switch($delta) {
+    case 'test_client' :
+      $form = drupal_get_form('edclient_edit_form', arg(1));
+      $block['content'] = render($form);
+      break;
+  }
+ 
+  return $block;
+}
+
+function edclient_edit_form($form, &$form_state, $cid) {  
+  $form_state['cid'] = $cid;
+  $entity = entity_load_single('client', $cid);
+  field_attach_form('client', $entity, $form, $form_state);
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Сохранить'),
+    '#weight' => 50,
+    '#prefix' => '<div class="form-actions form-wrapper">',
+    '#suffix' => '</div>',
+  );
+  return $form;
+}
+
+/**
+ * Form submit for edit client.
+ */
+function edclient_edit_form_submit($form, &$form_state) {
+  global $user; 
+  $entity = entity_load_single('client', $form_state['cid']);
+  //$entity->created = time();
+  field_attach_submit('client', $entity, $form, $form_state);
+  //field_attach_update('client', $entity);
+  $entity->save();
+  drupal_goto('clients');
+}
+
+function edclient_views_api() {
+    return array(
+        'api' => 3,
+        'path' => drupal_get_path('module', 'edclient') . '/includes/views',
+        //'template path' => drupal_get_path('module', 'example') . '/themes',
+    );
+}

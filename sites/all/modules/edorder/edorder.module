@@ -1,0 +1,64 @@
+<?php
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function edorder_form_order_node_form_alter(&$form, &$form_state) {
+  $form['title']['#type'] = 'value';
+  $form['title']['#default_value'] = 'new order';
+  
+  // Client's phone.
+  $form['field_phone']['#attributes']['class'][] = 'span6';
+  
+  // Client's name.
+  $form['field_fullname']['#attributes']['class'][] = 'span6';
+  
+  // Address.
+  $form['field_address']['und'][0]['field_full_address']['#attributes']['class'][] = 'span5';
+  $form['field_address']['und'][0]['field_comment']['#attributes']['class'][] = 'span7';
+  $form['field_address']['und'][0]['#title'] = 'Адрес доставки';
+  
+  // Order content.
+  for($i=0; $i<=$form['field_order_content']['und']['#max_delta']; $i++) {
+    $form['field_order_content']['und'][$i]['field_product']['#attributes']['class'][] = 'span5';
+    $form['field_order_content']['und'][$i]['field_quantity']['#attributes']['class'][] = 'span2';
+    $form['field_order_content']['und'][$i]['field_comment']['#attributes']['class'][] = 'span5';
+    
+    // Remove button.
+    $form['field_order_content']['und'][$i]['remove_button']['#attributes']['class'][] = 'btn-mini';
+    $form['field_order_content']['und'][$i]['remove_button']['#prefix'] = '<p style="margin-top:3px; margin-bottom:0;" class="pull-right">';
+    $form['field_order_content']['und'][$i]['remove_button']['#suffix'] = '</p>';    
+  }
+  
+  // Person quantity.
+  $form['field_person_quantity']['und'][0]['value']['#attributes']['class'][] = 'span2';
+  
+  // Order totla.
+  $form['total'] = array(
+    '#type' => 'container',
+    '#prefix' => '<div class="row-fluid"><div class="span12"><hr><h3 class="pull-right">Итого: 0 руб.</h3></div></div>',
+    '#weight' => 20
+  );
+  
+  // Callback a validation function.
+  $form['#validate'][] = '_order_form_validation';
+}
+
+/**
+ * Order form validation
+ */
+function _order_form_validation(&$form, &$form_state) {
+  // Validate the address field if is uncheck field_self_delivery
+  if(($form_state['values']['field_self_delivery']['und'][0]['value']==0)&&(empty($form_state['values']['field_address']['und'][0]['field_full_address']['und'][0]['value']))) {
+    form_set_error('field_address][und][0][field_full_address', t('Необходимо заполнить Адрес доставки.'));
+  }
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function edorder_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'edorder') . '/includes/views',
+  );
+}

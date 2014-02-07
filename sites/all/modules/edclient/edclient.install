@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function edclient_schema() {
+  $schema['edclient'] = array(
+    'fields' => array(
+      'cid' => array(
+        'description' => 'Client ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The user ID created current client',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('cid'),
+  );
+
+  return $schema;
+}
